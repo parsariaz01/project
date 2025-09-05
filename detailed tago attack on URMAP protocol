@@ -1,0 +1,90 @@
+import secrets  # Import secrets module for secure random number generation
+
+    # Column-wise sum for the current session
+    column_sum = column_wise_sum(equations, bits)
+    print(f"Column-wise Sum of 1's for this session: {column_sum}")
+
+    # Server updates
+    IDS_old = IDS_new
+    IDS_new = xor(IDS_old, ID, bits)
+    K1_old = K1_new
+    K1_new = K1_prime
+    K2_old = K2_new
+    K2_new = K2_prime
+    TS = TS1
+
+    return IDS_old, IDS_new, K1_old, K1_new, K2_old, K2_new, column_sum
+
+def count_matching_bits(id_find, ID):
+    # Count the number of bits that match between id_find and ID
+    return sum(a == b for a, b in zip(id_find, ID))
+
+def main():
+    bit_options = [4, 8, 16, 32, 64, 96]
+    bit_system = int(input(f"Select bit system {bit_options}: "))
+    while bit_system not in bit_options:
+        print("Invalid bit system. Please choose from the available options.")
+        bit_system = int(input(f"Select bit system {bit_options}: "))
+
+    # Get initial inputs
+    ID = get_valid_input("Enter ID (binary only): ", bit_system)
+    IDS = get_valid_input("Enter IDS (binary only): ", bit_system)
+    SID = get_valid_input("Enter SID (binary only): ", bit_system)
+    K1_old = get_valid_input("Enter K1_old (binary only): ", bit_system)
+    K1_new = get_valid_input("Enter K1_new (binary only): ", bit_system)
+    K2_old = get_valid_input("Enter K2_old (binary only): ", bit_system)
+    K2_new = get_valid_input("Enter K2_new (binary only): ", bit_system)
+    TT = get_valid_input("Enter TT (binary only): ", bit_system)
+    TS = get_valid_input("Enter TS (binary only): ", bit_system)
+
+    num_equations = 15  # Total number of equations used in the protocol
+    cumulative_column_sum = [0] * bit_system
+    id_find = ['0'] * bit_system  # Initialize id_find with '0'
+
+    IDS_old = IDS_new = IDS
+    K1_old = K1_new
+    K2_old = K2_new
+
+    try:
+        session_num = 0
+        while True:
+            session_num += 1
+            print(f"\nSession {session_num}")
+
+            N1 = generate_random_binary(bit_system)  # Securely initialize N1 using secrets
+
+            IDS_old, IDS_new, K1_old, K1_new, K2_old, K2_new, column_sum = \
+                run_protocol_phase(N1, ID, IDS_old, IDS_new, SID, K1_old, K1_new, K2_old, K2_new, TT, TS, bit_system)
+
+            # Aggregate column sums
+            cumulative_column_sum = [cumulative_column_sum[i] + column_sum[i] for i in range(bit_system)]
+
+            # Calculate gamma for the current session
+            gamma = 0.5 * num_equations * session_num
+            print(f"Gamma value for this session: {gamma}")
+
+            # Determine id_find based on the comparison with gamma
+            id_find = ['1' if count >= gamma else '0' for count in cumulative_column_sum]
+            id_find_str = ''.join(id_find)
+            print(f"ID Find: {id_find_str}")
+
+            # Compare id_find with ID and display
+            if id_find_str == ID:
+                print(f"ID Find matches ID: {id_find_str}")
+                break  # Exit loop if id_find matches ID
+            else:
+                print(f"ID Find does not match ID: {id_find_str}")
+
+            # Count matching bits
+            match_count = count_matching_bits(id_find_str, ID)
+            print(f"Number of matching bits: {match_count}")
+
+            print(f"Total Column-wise Sum of 1's across all sessions: {cumulative_column_sum}")
+
+    except KeyboardInterrupt:
+        print("\nProtocol simulation interrupted.")
+    except Exception as e:
+        print(f"\nAn error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
