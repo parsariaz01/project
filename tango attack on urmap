@@ -1,0 +1,66 @@
+import re
+        bit_system = int(input(f"Select bit system {bit_options}: "))
+
+    # Get initial inputs
+    ID = get_valid_input("Enter ID: ", bit_system)
+    IDS = get_valid_input("Enter IDS: ", bit_system)
+    SID = get_valid_input("Enter SID: ", bit_system)
+    K1_old = get_valid_input("Enter K1_old: ", bit_system)
+    K1_new = get_valid_input("Enter K1_new: ", bit_system)
+    K2_old = get_valid_input("Enter K2_old: ", bit_system)
+    K2_new = get_valid_input("Enter K2_new: ", bit_system)
+    TT = get_valid_input("Enter TT: ", bit_system)
+    TS = get_valid_input("Enter TS: ", bit_system)
+
+    num_equations = 15  # Total number of equations used in the protocol
+    cumulative_column_sum = [0] * bit_system
+    id_find = ['0'] * bit_system  # Initialize id_find with '0'
+
+    IDS_old = IDS_new = IDS
+    K1_old = K1_new
+    K2_old = K2_new
+
+    try:
+        session_num = 0
+        while True:
+            session_num += 1
+            print(f"\nSession {session_num}")
+
+            N1 = generate_random_binary(bit_system)  # Securely initialize N1 using secrets
+
+            IDS_old, IDS_new, K1_old, K1_new, K2_old, K2_new, column_sum = \
+                run_protocol_phase(N1, ID, IDS_old, IDS_new, SID, K1_old, K1_new, K2_old, K2_new, TT, TS, bit_system)
+
+            # Aggregate column sums
+            cumulative_column_sum = [cumulative_column_sum[i] + column_sum[i] for i in range(bit_system)]
+
+            # Calculate gamma for the current session
+            num_equations = 15
+            gamma = 0.5 * num_equations * session_num
+            print(f"Gamma value for this session: {gamma}")
+
+            # Determine id_find based on the comparison with gamma
+            id_find = ['1' if count >= gamma else '0' for count in cumulative_column_sum]
+            id_find_str = ''.join(id_find)
+            print(f"ID Find: {id_find_str}")
+
+            # Compare id_find with ID and display
+            if id_find_str == ID:
+                print(f"ID Find matches ID: {id_find_str}")
+                break  # Exit loop if id_find matches ID
+            else:
+                print(f"ID Find does not match ID: {id_find_str}")
+
+            # Count matching bits
+            match_count = count_matching_bits(id_find_str, ID)
+            print(f"Number of matching bits: {match_count}")
+
+            print(f"Total Column-wise Sum of 1's across all sessions: {cumulative_column_sum}")
+
+    except KeyboardInterrupt:
+        print("\nProtocol simulation interrupted.")
+    except Exception as e:
+        print(f"\nAn error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
