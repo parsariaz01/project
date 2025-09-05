@@ -1,0 +1,163 @@
+import re
+import random
+import time
+
+def to_binary(value, bits):
+    if re.match(r'^[0-9]+$', value):  # Decimal
+        return format(int(value), f'0{bits}b')
+    elif re.match(r'^[0-9A-Fa-f]+$', value):  # Hexadecimal
+        return format(int(value, 16), f'0{bits}b')
+    else:
+        return value
+
+def validate_input(value, bits):
+    if len(value) == bits and all(c in '01' for c in value):
+        return True
+    else:
+        return False
+
+def get_valid_input(prompt, bits):
+    while True:
+        value = input(prompt)
+        value_binary = to_binary(value, bits)
+        if validate_input(value_binary, bits):
+            return value_binary
+        else:
+            print(f"Invalid input. Please enter a value with {bits} bits in binary.")
+
+def xor(bin1, bin2, bits):
+    return format(int(bin1, 2) ^ int(bin2, 2), f'0{bits}b')
+
+def rotate_left(bin_str, shift_bits):
+    return bin_str[shift_bits:] + bin_str[:shift_bits]
+
+def hamming_weight(bin_str):
+    return bin_str.count('1')
+
+def bitwise_and(bin1, bin2):
+    return ''.join('1' if b1 == '1' and b2 == '1' else '0' for b1, b2 in zip(bin1, bin2))
+
+def bitwise_or(bin1, bin2):
+    return ''.join('1' if b1 == '1' or b2 == '1' else '0' for b1, b2 in zip(bin1, bin2))
+
+def generate_random_binary(bits):
+    random.seed(time.time())  # Initialize the random number generator with the current time
+    return ''.join(random.choice('01') for _ in range(bits))
+
+def run_protocol_phase(N1, ID, IDS_old, IDS_new, SID, K1_old, K1_new, K2_old, K2_new, TT, TS, bits):
+    Tc = generate_random_binary(bits)  # Randomly initialize Tc
+
+     # Updated Equations
+    M1 = rotate_left(rotate_left(xor(IDS_new, N1, bits), int(K1_new, 2)), int(K2_new, 2))
+    M2 = rotate_left(xor(xor(IDS_new, SID_new, bits), K1_new, bits), int(xor(N1, K2_new, bits), 2))
+    M3 = rotate_left(xor(SID_new, Tc, bits), int(N1, 2))
+    M4 = rotate_left(xor(K2_new, Tc, bits), int(xor(ID, K1_new, bits), 2))
+    
+
+    # Always use IDS_new
+    IDS_used = IDS_new
+    K1_used = K1_new
+    K2_used = K2_new
+    SID_used = SID_new
+    
+
+
+   
+
+    # Server updates
+    IDS_old = IDS_used
+    # Eq(11)
+    IDS_new = rotate_left(xor_binary(IDS_used, K1_used), hamming_weight(xor_binary(SID_used, xor_binary(K2_used, N1))))
+    SID_old = SID_used
+    SID_new= rotate_left(rotate_left(binary_xor(SID, n1), hamming_weight(IDS)), hamming_weight(binary_xor(K1, K2)))
+    # Eq(12)
+    K1_old = K1_new
+    # Eq(12)
+    K1_new = rotate_left(xor_binary(K1_used, N1), hamming_weight(IDS_used))
+    # Eq(13)
+    K2_old = K2_new
+    # Eq(13)
+    K2_new = rotate_left(xor_binary(K2_used, IDS_used), hamming_weight(K1_used))
+   
+
+   
+    
+    # Commented out the server update print statements
+    print("\nServer Update Phase:")
+    print(f"IDS_old: {IDS_old} (Eq(10))")
+    print(f"IDS_new: {IDS_new} (Eq(11))")
+    print(f"SID_new: {SID_new} (Eq())")
+    print(f"SID_old: {SID_old} (Eq(11))")
+    print(f"K1_old: {K1_old} (Eq(12))")
+    print(f"K1_new: {K1_new} (Eq(12))")
+    print(f"K2_old: {K2_old} (Eq(13))")
+    print(f"K2_new: {K2_new} (Eq(13))")
+    # print(f"TS: {TS} (Updated)")
+
+    return IDS_old, IDS_new, SID_old, SID_new, K1_old, K1_new, K2_old, K2_new, hamming_weights
+
+def main():
+    bit_options = [4, 8, 16, 32, 64, 96]
+    bit_system = int(input(f"Select bit system {bit_options}: "))
+    while bit_system not in bit_options:
+        print("Invalid bit system. Please choose from the available options.")
+        bit_system = int(input(f"Select bit system {bit_options}: "))
+
+    num_sessions = int(input("Enter the number of sessions: "))
+    while num_sessions <= 0:
+        print("Invalid number of sessions. Please enter a positive integer.")
+        num_sessions = int(input("Enter the number of sessions: "))
+
+    #IDS_old = IDS_new = SID_old= SID_new = K1_old = K1_new = K2_old = K2_new = None
+    #total_hamming_weights = [0] * 6  # Initialize a list to store total Hamming weights for all combinations
+
+    try:
+        for session_num in range(1, num_sessions + 1):
+            print(f"\nSession {session_num}")
+
+            if IDS_old and IDS_new and SID_old and SID_new and K1_old and K1_new and K2_old and K2_new:
+                N1 = generate_random_binary(bit_system)  # Randomly initialize N1
+            else:
+                # Get all required inputs from the user
+                ID = get_valid_input("Enter ID: ", bit_system)
+                IDS_old = '1010'
+                IDS_new = '1010'
+                SID_old = '0111'
+                SID_new = '0111'
+                K1_old = '1100'
+                K1_new = '1100'
+                K2_old = '0011'
+                K2_new = '0011'
+                TT = '1001'
+                TS = '1000'
+                
+                # Initialize N1 with a random binary value
+                N1 = generate_random_binary(bit_system)
+                # Initialize IDS_old and IDS_new to IDS
+                IDS_old = IDS_new = IDS
+                
+
+                # Commented out the entered binary value results
+                print("\nEntered Values in Binary:")
+                print(f"N1: {N1}")
+                print(f"ID: {ID}")
+                print(f"IDS_old: {IDS_old}")
+                print(f"IDS_new: {IDS_new}")
+                print(f"SID_old: {SID_old}")
+                print(f"SID_new: {SID_new}")
+                print(f"K1_old: {K1_old}")
+                print(f"K1_new: {K1_new}")
+                print(f"K2_old: {K2_old}")
+                print(f"K2_new: {K2_new}")
+                print(f"TT: {TT}")
+                print(f"TS: {TS}")
+
+            IDS_old, IDS_new, K1_old, K1_new, K2_old, K2_new, hamming_weights = \
+                run_protocol_phase(N1, ID, IDS_old, IDS_new,SID_old, SID_new, K1_old, K1_new, K2_old, K2_new, TT, bit_system)
+
+           
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
