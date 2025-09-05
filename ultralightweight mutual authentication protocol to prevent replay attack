@@ -1,0 +1,79 @@
+import re
+
+def to_binary(value, bits):
+    if re.match(r'^[0-9]+$', value):  # Decimal
+        return format(int(value), f'0{bits}b')
+    elif re.match(r'^[0-9A-Fa-f]+$', value):  # Hexadecimal
+        return format(int(value, 16), f'0{bits}b')
+    else:
+        return value
+
+def validate_input(value, bits):
+    return len(value) == bits and all(c in '01' for c in value)
+
+def get_valid_input(prompt, bits):
+    while True:
+        value = input(prompt)
+        value_binary = to_binary(value, bits)
+        if validate_input(value_binary, bits):
+            return value_binary
+        else:
+            print(f"Invalid input. Please enter a value with {bits} bits in binary.")
+
+def xor(bin1, bin2, bits):
+    return format(int(bin1, 2) ^ int(bin2, 2), f'0{bits}b')
+
+def rotate_left(bin_str, shift_bits):
+    return bin_str[shift_bits:] + bin_str[:shift_bits]
+
+def hamming_weight(bin_str):
+    return bin_str.count('1')
+
+def bitwise_and(bin1, bin2):
+    return ''.join('1' if b1 == '1' and b2 == '1' else '0' for b1, b2 in zip(bin1, bin2))
+
+def bitwise_or(bin1, bin2):
+    return ''.join('1' if b1 == '1' or b2 == '1' else '0' for b1, b2 in zip(bin1, bin2))
+
+def run_protocol_phase(N1, ID, IDS_old, IDS_new, SID, K1_old, K1_new, K2_old, K2_new, TT, TS, Tc, bits, compare_ids):
+    M1 = xor(SID, N1, bits)
+    M2 = bitwise_and(xor(SID, Tc, bits), N1)
+    TS1 = bitwise_and(xor(N1, TS, bits), xor(N1, SID, bits))
+    M3 = xor(SID, TS1, bits)
+    M4 = xor(IDS_new, TS1, bits)
+    IDS_used = IDS_new if compare_ids == 'new' else IDS_old
+    M5 = xor(Tc, IDS_used, bits)
+    K1_prime = rotate_left(xor(K1_new, N1, bits), hamming_weight(IDS_used))
+    K2_prime = rotate_left(xor(K2_new, TS, bits), hamming_weight(IDS_used))
+    M6 = bitwise_and(xor(M5, K2_prime, bits), K1_prime)
+    
+    print("\nTag Authentication Phase:")
+    print(f"M1: {M1} (Eq(1))")
+    print(f"M2: {M2} (Eq(2))")
+    print(f"TS1: {TS1} (Eq(3))")
+    print(f"M3: {M3} (Eq(4))")
+    print(f"M4: {M4} (Eq(5))")
+    print(f"M5: {M5} (Eq(6))")
+    print(f"K1': {K1_prime} (Eq(7))")
+    print(f"K2': {K2_prime} (Eq(8))")
+    print(f"M6: {M6} (Eq(9))")
+    print(f"N1: {N1} ())")
+    print(f"TS for this session: {TS} (Eq(9))")
+    print(f"Tc for this session: {Tc} (Eq(9))")
+    
+    if compare_ids == 'new':
+        IDS_old = IDS_used
+        IDS_new = bitwise_or(xor(IDS_used, ID, bits), xor(N1, TS, bits))
+        K1_old, K1_new = K1_new, K1_prime
+        K2_old, K2_new = K2_new, K2_prime
+        TS = TS1
+        print("\nServer Update Phase:")
+        print(f"IDS_old: {IDS_old} (Eq(10))")
+        print(f"IDS_new: {IDS_new} (Eq(11))")
+        print(f"K1_old: {K1_old} (Eq(12))")
+        print(f"K1_new: {K1_new} (Eq(12))")
+        print(f"K2_old: {K2_old} (Eq(13))")
+        print(f"K2_new: {K2_new} (Eq(13))")
+        print(f"TS for next session: {TS} (Eq(13))")
+    else:
+        print("\nComparison with IDS_old selected. No update needed.")
